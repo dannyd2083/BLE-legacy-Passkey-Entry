@@ -88,7 +88,7 @@ The responder should be able to decrypt the message.
 
 There is a significant weakness within this pairing method.
 
-Assume the attacker is able to sniff all data exchanged between the initiator and the responder, as implemented in the *attacker.py*.
+Assume the attacker is able to sniff all data exchanged between the initiator and the responder, as implemented in the *sniff()* function in *attacker.py*.
 
 Finish the *attack()* function to launch the attack against this pairing method.
 
@@ -103,6 +103,8 @@ Write a report explaining the following points:
 - How each of the legacy pairing phases are implemented in your code? (5 points)
 
 - What is the weakness in the legacy pairing method and how to exploit it? (15 points)
+
+You can also include other topics you think are important for this project.
 
 ## Submit Instruction
 
