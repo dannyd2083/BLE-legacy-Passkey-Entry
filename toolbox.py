@@ -1,5 +1,5 @@
 from Crypto.Cipher import AES
-
+from pwn import *
 # !!! In byte strings, the most significant bit is on the right !!!
 
 def e(key, data):
@@ -27,7 +27,19 @@ def c1(k, r, pres, preq, iat, ia, rat, ra, padding = b'\x00'*4):
     In e, the most significant octet of key corresponds to key[0], the most significant octet of plaintextData corresponds to in[0] and the most significant octet of encryptedData corresponds to out[0].
     """
     #TODO: implement c1, return type should be bytes
-    return b'\x00'
+    # Prepare iat' and rat' by padding with 7 zero bits to make them 8 bits
+    iat_prime = p8(iat & 0x01)  # Keep the least significant bit
+    rat_prime = p8(rat & 0x01)
+
+    # Generate p1: pres || preq || rat' || iat'
+    p1 = pres + preq + rat_prime + iat_prime
+    p1_xor_r = XOR(p1, r)
+    intermediate_result = e(k, p1_xor_r)
+    p2 = padding + ia + ra
+    final_input = XOR(intermediate_result, p2)
+    confirm_value = e(k, final_input)
+
+    return confirm_value
 
 def s1(k, r1, r2):
     """
@@ -41,7 +53,16 @@ def s1(k, r1, r2):
     In e, the most significant octet of key corresponds to key[0], the most significant octet of plaintextData corresponds to in[0] and the most significant octet of encryptedData corresponds to out[0].
     """
     #TODO: implement s1, return type should be bytes
-    return b'\x00'
+    # Extract the least significant 64 bits from r1 and r2
+    r1_prime = r1[8:]  # Last 8 bytes (64 bits)
+    r2_prime = r2[8:]  # Last 8 bytes (64 bits)
+
+    # Concatenate r1' and r2' to form the 128-bit value r'
+    r_prime = r1_prime + r2_prime
+
+    # Encrypt r' using AES with key k to generate the STK
+    stk = e(k, r_prime)
+    return stk
 
 def derive_session_key(skd_p, skd_c, ltk):
     skd = skd_p + skd_c
