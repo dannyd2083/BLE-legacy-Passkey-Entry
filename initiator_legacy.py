@@ -4,7 +4,7 @@ from pwn import *
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from toolbox import *
-
+import secrets
 # !!! In byte strings, the most significant bit is on the right !!!
 
 
@@ -50,7 +50,27 @@ console_handler.setFormatter(console_formatter)
 # Add handlers to the logger
 logger.addHandler(console_handler)
 
-def start_passkey_entry_pairing(host='127.0.0.1', port=65433):
+def create_pairing_request():
+    # Fields for the pairing request
+
+    code = p8(PAIR_REQ_OPCODE)  # 1 byte for opcode
+    io_capability = p8(IOCap)  # 1 byte for IO capability
+    oob_flag = p8(OOBDATA)  # 1 byte for OOB flag
+    auth_flag = p8(AuthReq) # 1 byte for authentication requirements
+    encryption_key_size = p8(MAXKEYSIZE)  # 1 byte for max encryption key size
+    initiator_key_distribution = p8(INITIATOR_KEY_DIST)  # 1 byte for key distribution
+    responder_key_distribution = p8(RESPONDER_KEY_DIST)  # 1 byte for key distribution
+
+    # Combine the fields into a pairing response packet
+
+    pairing_request = flat(code + io_capability + oob_flag + auth_flag +
+                       encryption_key_size + initiator_key_distribution + responder_key_distribution)
+
+    print(f'created pairing_request {pairing_request.hex()}')
+
+    return pairing_request
+
+def start_passkey_entry_pairing(host='127.0.0.1', port=65432):
     conn = remote(host, port)
     logger.info(f'Connected to server at {host}:{port}')
 
@@ -58,13 +78,13 @@ def start_passkey_entry_pairing(host='127.0.0.1', port=65433):
         # Exchange MAC addresses
         conn.send(MAC_ADDR)
         logger.info(f'Sent MAC: {MAC_ADDR.hex()}')
-
         MAC_ADDR_responder = conn.recv(6)
         logger.info(f'Received MAC: {MAC_ADDR_responder.hex()}')
 
         # Send pairing request to responder
 
-        pair_req = # TODO
+        #TODO 1
+        pair_req = create_pairing_request()
         conn.send(pair_req)
         logger.info(f'Sent pairing request: {pair_req.hex()}')
 
@@ -86,14 +106,16 @@ def start_passkey_entry_pairing(host='127.0.0.1', port=65433):
             TK = passkey_input.to_bytes(16, byteorder='little')
 
             # Generate random number (rand)
-            LP_RAND_I = # TODO
+            # TODO DONE
+            LP_RAND_I = secrets.token_bytes(16)
 
             # Calculate Confirm Value (LP_CONFIRM_I)
             # pres and preq are the pairing response and request including the opcodes
             pres = pair_rsp  # 7 bytes
             preq = pair_req  # 7 bytes
 
-            LP_CONFIRM_I = # TODO
+            # TODO DONE
+            LP_CONFIRM_I = c1(TK,LP_RAND_I,preq,pres,iat,MAC_ADDR,rat,MAC_ADDR_responder)
             logger.debug(f'Computed LP_CONFIRM_I: {LP_CONFIRM_I.hex()}')
 
             # Send LP_CONFIRM_I to responder
@@ -109,7 +131,8 @@ def start_passkey_entry_pairing(host='127.0.0.1', port=65433):
                 ConfirmValue_responder = confirm_resp[1:]
 
                 # Send LP_RAND_I to responder
-                rand_pkt = # TODO
+                # TODO DONE
+                rand_pkt = p8(PAIR_RANDOM_OPCODE)+ LP_RAND_I
                 conn.send(rand_pkt)
                 logger.info(f'Sent LP_RAND_I: {rand_pkt.hex()}')
 
@@ -121,7 +144,8 @@ def start_passkey_entry_pairing(host='127.0.0.1', port=65433):
                     rand_responder = rand_resp[1:]
 
                     # Verify responder's ConfirmValue
-                    ConfirmValue_calc = # TODO
+                    # TODO DONE
+                    ConfirmValue_calc = c1(TK,rand_responder,preq,pres,iat,MAC_ADDR,rat,MAC_ADDR_responder)
                     if ConfirmValue_calc != ConfirmValue_responder:
                         logger.error("Confirm values do not match. Pairing failed.")
                         # Send Pairing Failed packet (if desired)
@@ -130,7 +154,8 @@ def start_passkey_entry_pairing(host='127.0.0.1', port=65433):
                         return
 
                     # Generate Short-Term Key (STK)
-                    STK = # TODO
+                    #TODO DONE
+                    STK = s1(TK,LP_RAND_I,rand_responder)
                     logger.debug(f'Generated STK: {STK.hex()}')
 
                     # Encryption with STK can proceed here
@@ -147,8 +172,12 @@ def start_passkey_entry_pairing(host='127.0.0.1', port=65433):
                     ivskd_p = conn.recv()
                     log.info(f'Received IV_P + SKD_P:{ivskd_p.hex()}')
 
-                    session_iv = # TODO
-                    session_key = # TODO
+                    # TODO DONE
+                    iv_p = ivskd_p[:4]
+                    skd_p = ivskd_p[4:]
+                    session_iv = iv_p + iv_c
+                    # TODO
+                    session_key = derive_session_key(skd_p, skd_c, STK)
 
                     cipher = AES.new(session_key, AES.MODE_CCM, nonce=session_iv, mac_len=4)
                     ciphertext, mac = cipher.encrypt_and_digest(LTK)

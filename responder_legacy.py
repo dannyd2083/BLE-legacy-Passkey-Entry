@@ -5,7 +5,7 @@ from pwn import *
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from toolbox import *
-
+import secrets
 # !!! In byte strings, the most significant bit is on the right !!!
 
 # Packet types
@@ -79,15 +79,16 @@ def start_passkey_entry_pairing(conn):
             # Derive Temporary Key (TK)
             TK = passkey.to_bytes(16, byteorder='little')
 
-            # Generate random number (rand)
-            LP_RAND_R = # TODO
 
+            # Generate random number (rand)
+            # TODO DONE
+            LP_RAND_R = secrets.token_bytes(16)
             # Calculate Confirm Value (ConfirmValue)
             # pres and preq are the pairing response and request including the opcodes
             pres = pair_rsp  # 7 bytes
             preq = pair_req  # 7 bytes
-
-            ConfirmValue = # TODO
+            # TODO DONE
+            ConfirmValue = c1(TK,LP_RAND_R,preq,pres,iat,MAC_ADDR_initiator,rat,MAC_ADDR)
             logger.debug(f'Computed ConfirmValue: {ConfirmValue.hex()}')
 
             # Receive ConfirmValue from initiator
@@ -115,7 +116,8 @@ def start_passkey_entry_pairing(conn):
                     logger.info(f'Sent LP_RAND_R: {rand_resp.hex()}')
 
                     # Verify initiator's ConfirmValue
-                    ConfirmValue_calc = # TODO
+                    # TODO DONE
+                    ConfirmValue_calc = c1(TK,rand_initiator,preq,pres,iat,MAC_ADDR_initiator,rat,MAC_ADDR)
                     if ConfirmValue_calc != ConfirmValue_initiator:
                         logger.error("Confirm values do not match. Pairing failed.")
                         # Send Pairing Failed packet (if desired)
@@ -124,7 +126,8 @@ def start_passkey_entry_pairing(conn):
                         return
 
                     # Generate Short-Term Key (STK)
-                    STK = # TODO
+                    # TODO DONE
+                    STK = s1(TK,rand_initiator,LP_RAND_R)
                     logger.debug(f'Generated STK: {STK.hex()}')
 
                     # Encryption with STK can proceed here
@@ -140,8 +143,10 @@ def start_passkey_entry_pairing(conn):
                     conn.send(iv_p + skd_p)
                     log.info(f'Send IV_P + SKD_P:{iv_p.hex() + skd_p.hex()}')
 
-                    session_iv = # TODO
-                    session_key = # TODO
+                    # TODO
+                    session_iv = iv_p + iv_c
+                    # TODO
+                    session_key = derive_session_key(skd_p, skd_c, STK)
 
                     # Receive encrypted data from initiator
                     encrypted_data_pkt = conn.recv()

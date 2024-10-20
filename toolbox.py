@@ -28,8 +28,11 @@ def c1(k, r, pres, preq, iat, ia, rat, ra, padding = b'\x00'*4):
     """
     #TODO: implement c1, return type should be bytes
     # Prepare iat' and rat' by padding with 7 zero bits to make them 8 bits
-    iat_prime = p8(iat & 0x01)  # Keep the least significant bit
-    rat_prime = p8(rat & 0x01)
+    iat_int = int.from_bytes(iat, byteorder='big')  # Convert bytes to int
+    rat_int = int.from_bytes(rat, byteorder='big')  # Convert bytes to int
+
+    iat_prime = p8(iat_int & 0x01)  # Keep the least significant bit
+    rat_prime = p8(rat_int & 0x01)  # Keep the least significant bit
 
     # Generate p1: pres || preq || rat' || iat'
     p1 = pres + preq + rat_prime + iat_prime
