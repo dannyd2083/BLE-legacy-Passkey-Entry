@@ -70,7 +70,7 @@ def create_pairing_request():
 
     return pairing_request
 
-def start_passkey_entry_pairing(host='127.0.0.1', port=65432):
+def start_passkey_entry_pairing(host='127.0.0.1', port=65433):
     conn = remote(host, port)
     logger.info(f'Connected to server at {host}:{port}')
 
