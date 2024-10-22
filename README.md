@@ -106,12 +106,75 @@ Write a report explaining the following points:
 
 You can also include other topics you think are important for this project.
 
-## Submit Instruction
+# Report for A2 CMPT789
 
-Please make sure your code can run.
+## 1. Legacy Pairing Phases Implementation (5 Points)
 
-Your code will be tested by first running *responder.py*, then *attacker.py*, and lastly *initiator.py*.
+### Phase 1: Feature Exchange
+In this phase, the initiator sends a pairing request containing its supported features.
 
-Please put all your code and report under one folder (e.g., 'proj2') and compress the folder (e.g., using `tar czvf proj2.tgz proj2').
+**Implementation:**
+- The `initiator_legacy.py` sends the pairing request via the `send(pairing_request)` function.
+- The responder replies with a pairing response containing its capabilities.
+- Both sides store these exchanged features to decide the pairing method.
 
-Upload your code in Canvas.
+### Phase 2: Short-Term Key (STK) Generation
+The STK is generated using the user-entered passkey and two random values from both initiator and responder.
+
+**Implementation:**
+- A 6-digit passkey is entered at the initiator side.
+- The random values (`LP_RAND_I` and `LP_RAND_R`) are exchanged between the two devices.
+- The `c1()` function generates the confirm values using the passkey and exchanged random values.
+- If the confirm values match on both sides, the `s1()` function computes the STK using the passkey and random numbers.
+
+### Phase 3: Session Key and Encryption Setup
+The STK is used to derive a session key, which encrypts the communication link.
+
+**Implementation:**
+- The initiator and responder generate the `ivskd_c` and `ivskd_p` values and exchange them.
+- `iv_p` and `iv_c` are extracted, combined, and encrypted with the STK to derive the session key on both sides.
+- The session key encrypts the Long-Term Key (LTK), which is sent across the link using AES-CCM encryption.
+
+---
+
+## 2. Weakness in the Legacy Pairing Method and Exploitation (15 Points)
+
+The Passkey Entry pairing method is vulnerable to brute force attacks due to:
+
+- The passkey being only 6 digits long (000000 to 999999).
+- A small keyspace (1 million possibilities) making brute force feasible.
+- No secure channel used during pairing, allowing attackers to sniff the data exchanged between the initiator and responder.
+
+### Exploitation Strategy
+
+An attacker can perform a **man-in-the-middle (MITM)** attack by intercepting communication between the two devices, capturing:
+
+- Pairing requests and responses
+- Random values (`LP_RAND_I` and `LP_RAND_R`)
+- Confirm values (`LP_CONFIRM_I` and `LP_CONFIRM_R`)
+
+#### Steps for Exploitation:
+
+1. **Sniffing Communication:**
+   - The `sniff()` function intercepts data between the initiator and responder, including MAC addresses, pairing requests/responses, confirm values, and random values.
+
+2. **Brute Force Attack:**
+   - The `attack()` function iterates over all possible 6-digit passkeys (000000 to 999999).
+   - For each passkey, it recomputes the confirm values using `c1()` and checks if they match the intercepted confirm values.
+   - If a match is found, the correct passkey is identified.
+
+3. **Session Key Derivation:**
+   - Using the correct passkey, the STK is generated with the `s1()` function.
+   - The session key is derived by combining `ivskd_c` and `ivskd_p` and encrypting them with the STK.
+
+4. **Decryption:**
+   - The encrypted LTK is decrypted using the derived session key to demonstrate how communication can be compromised.
+
+---
+
+## 3. Other Important Aspects
+
+### Recommended Mitigations
+- Use longer passkeys or stronger authentication methods.
+- Encrypt the pairing process to prevent sniffing.
+- Implement rate limiting on failed pairing attempts to prevent brute force attacks.
