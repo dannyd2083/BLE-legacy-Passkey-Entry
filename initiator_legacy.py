@@ -103,7 +103,7 @@ def start_passkey_entry_pairing(host='127.0.0.1', port=65433):
 
             # Derive Temporary Key (TK)
             # TK is 128-bit (16 bytes), passkey is placed in least significant 16 bits (2 bytes)
-            TK = passkey_input.to_bytes(16, byteorder='little')
+            TK = passkey_input.to_bytes(16, byteorder='big')
 
             # Generate random number (rand)
             # TODO DONE

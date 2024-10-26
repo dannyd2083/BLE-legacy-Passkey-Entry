@@ -77,7 +77,7 @@ def start_passkey_entry_pairing(conn):
             print(f"Passkey to enter on the initiator device: {passkey:06d}")
 
             # Derive Temporary Key (TK)
-            TK = passkey.to_bytes(16, byteorder='little')
+            TK = passkey.to_bytes(16, byteorder='big')
 
 
             # Generate random number (rand)

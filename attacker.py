@@ -26,7 +26,7 @@ def attack(MAC_init, MAC_rsp, pair_req, pair_rsp, confirm_init, confirm_rsp, ran
     #TODO: implement attack and output the LTK to screen
     for passkey in range(1000000):  # Iterate from 000000 to 999999
         # Convert passkey to 128-bit TK (Temporary Key)
-        tk = int.to_bytes(passkey, 16, byteorder='little')
+        tk = int.to_bytes(passkey, 16, byteorder='big')
 
         # Recompute LP_CONFIRM_I and LP_CONFIRM_R using c1()
         recomputed_confirm_i = c1(tk, rand_init[1:], pair_req, pair_rsp, b'\x00',MAC_init, b'\x00', MAC_rsp)
