@@ -13,7 +13,7 @@ def XOR(byte_string_a, byte_string_b):
     assert len(byte_string_a) == len(byte_string_b), "XORing different lengths; You don't seem to know what you're doing"
     return bytes(a ^ b for a, b in zip(byte_string_a, byte_string_b))
 
-def c1(k, r, pres, preq, iat, ia, rat, ra, padding = b'\x00'*4):
+def c1(k, r, preq, pres, iat, ia, rat, ra, padding = b'\x00'*4):
     """
     k is 128 bits
     r is 128 bits
